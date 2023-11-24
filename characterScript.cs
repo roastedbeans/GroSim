@@ -30,7 +30,7 @@ public class characterScript : MonoBehaviour
     SimulationController simulationController;
     AILerp aILerp;
 
-    public pythonConnection pythonConnect;
+    pythonConnection pythonConnect;
 
     Path path;
     private bool isValidating = false;
@@ -61,8 +61,6 @@ public class characterScript : MonoBehaviour
     {
         ss = ItemControl.GetComponent<spawnScript>();
 
-        pythonConnect = GetComponent<pythonConnection>();
-
         timestampManager = ItemControl.GetComponent<TimestampManager>();
         csvDataManager = gameControl.GetComponent<CSVDataManager>();
         debugLogManager = gameControl.GetComponent<DebugLogManager>();
@@ -74,6 +72,7 @@ public class characterScript : MonoBehaviour
     // Start is called before the first frame update
     void Start()
     {
+        pythonConnect = GetComponent<pythonConnection>();
         seeker = GetComponent<Seeker>();
         rb = GetComponent<Rigidbody2D>();
         target = itemPrefab.GetComponent<Transform>();
@@ -116,7 +115,7 @@ public class characterScript : MonoBehaviour
                 {
                     isSorting = true;
                     shoppingList = currentShoppingList.Distinct().ToList();
-                    Sorting();
+                    ToSort(true, "");
                     generatedIndex = Random.Range(0, 999);  //999
                     aILerp.speed = Random.Range(0.3f, 0.5f);
                 }
@@ -124,22 +123,38 @@ public class characterScript : MonoBehaviour
                 {
                     isSorting = false;
                     shoppingList = currentShoppingList.Distinct().ToList();
-                    Shuffling();
+                    ToSort(true, "");
                     //cpy_shoppingList = shoppingList;
 
                 }
             }
             else
             {
-                isSorting = true;
-                generatedIndex = Random.Range(0, 9);  //999
+                isSorting = simulationController.typeSelected;
 
+                if(simulationController.listSelected == 0)
+                {
+                    generatedIndex = Random.Range(0, 9); //Small Item List Selection
+                }
+                else if(simulationController.listSelected == 1)
+                {
+                    generatedIndex = Random.Range(10, 19); //Medium Item List Selection
+                }
+                else if(simulationController.listSelected == 2)
+                {
+                    generatedIndex = Random.Range(20, 29); //Large Item List Selection
+                }
+                else if(simulationController.listSelected == 3)
+                {
+                    generatedIndex = Random.Range(0, 999); //Only if 1000 dataset is used
+                }
+              
                 aILerp.speed = Random.Range(0.3f, 0.5f);
                 currentShoppingList = shoppingLists[generatedIndex];
                 generatedIndex++;
                 Shuffle(currentShoppingList);
                 shoppingList = currentShoppingList.Distinct().ToList();
-                Sorting();
+                ToSort(true, "");
             }
 
             //remove dup shopping list
@@ -222,68 +237,105 @@ public class characterScript : MonoBehaviour
         }
     }
 
-    void Sorting()
+    void ToSort(bool isStart, string setX)
     {
-        cpy_shoppingList = shoppingList.Select(item => item).ToList();
-        str_shoppingList = string.Join(",", cpy_shoppingList);
-        str_shoppingList = pythonConnect.SortConnection("start^" + str_shoppingList, true);
-        cpy_shoppingList = str_shoppingList.Split(", ").ToList();
-    }
-
-    void Shuffling()
-    {
-        cpy_shoppingList = shoppingList.Select(item => item).ToList();
-        str_shoppingList = string.Join(",", cpy_shoppingList);
-        str_shoppingList = pythonConnect.SortConnection("start^" + str_shoppingList, false);
-        cpy_shoppingList = str_shoppingList.Split(", ").ToList();
+        if (isStart)
+        {
+            cpy_shoppingList = shoppingList.Select(item => item).ToList();
+            str_shoppingList = string.Join(",", cpy_shoppingList);
+            str_shoppingList = pythonConnect.SortConnection("start^" + str_shoppingList, isSorting);
+            cpy_shoppingList = str_shoppingList.Split(", ").ToList();
+        }
+        else if(!isStart)
+        {
+            str_shoppingList = string.Join(",", cpy_shoppingList);
+            if (cpy_shoppingList.Count > 1)
+                str_shoppingList = pythonConnect.SortConnection("mid^" + setX + "/" + str_shoppingList, isSorting);
+            else if ((cpy_shoppingList.Count == 1))
+            {
+                str_shoppingList = pythonConnect.SortConnection("end^" + str_shoppingList, isSorting);
+                Debug.Log("end of the list");
+            }
+            cpy_shoppingList.Clear();
+            cpy_shoppingList = str_shoppingList.Split(", ").ToList();
+        }
     }
 
     // Start click function to start the simulation
     public void StartClick()
     {
-        isValidating = false;
-        csvDataManager.deleteCSVRecordings();
-        pythonConnect.ClusterConnection();
-        if (pythonConnect.ReceiveData() == "DONE.")
+        if (pythonConnect.IsConnected())
         {
-            Debug.Log("Start simulation.");
-            csvDataManager.StartRecording();
-            debugLogManager.StartRecording();
-            isSimulating = true;
+            bool exist = shoppingListManager.LoadShoppingListsFromCSV();
 
-            if (initCharCoroutine != null)
+            if (exist)
             {
-                initCharCoroutine = null;
+                simulationController.DisplayButtonsRun();
+                isValidating = false;
+                csvDataManager.deleteCSVRecordings();
+                pythonConnect.ClusterConnection();
+                if (pythonConnect.ReceiveData() == "DONE.")
+                {
+                    Debug.Log("Start simulation.");
+                    csvDataManager.StartRecording();
+                    debugLogManager.StartRecording();
+                    isSimulating = true;
+
+                    if (initCharCoroutine != null)
+                    {
+                        initCharCoroutine = null;
+                    }
+                    initCharCoroutine = StartCoroutine(initCharacter());
+                }
+                else
+                {
+                    Debug.LogError("NO RESPONSE FROM SERVER...");
+                }
             }
-            initCharCoroutine = StartCoroutine(initCharacter());
         }
         else
         {
-            Debug.LogError("NO RESPONSE FROM SERVER...");
+            Debug.LogError("Server connection is inactive.");
         }
+      
     }
 
     // Start click function to start the simulation
     public void ValidateClick()
     {
-        isValidating = true;
-        pythonConnect.ClusterConnection();
-        if (pythonConnect.ReceiveData() == "DONE.")
+   
+        if (pythonConnect.IsConnected())
         {
-            Debug.Log("Start validation simulation.");
-            csvDataManager.StartValidationRecording();
-            debugLogManager.StartRecording();
-            isSimulating = true;
+            bool exist = shoppingListManager.LoadShoppingListsFromCSV();
 
-            if (initCharCoroutine != null)
+            if (exist)
             {
-                initCharCoroutine = null;
+                simulationController.DisplayButtonsValidate();
+                isValidating = true;
+                csvDataManager.deleteCSVRecordings();
+                pythonConnect.ClusterConnection();
+                if (pythonConnect.ReceiveData() == "DONE.")
+                {
+                    Debug.Log("Start validation simulation.");
+                    csvDataManager.StartValidationRecording();
+                    debugLogManager.StartRecording();
+                    isSimulating = true;
+
+                    if (initCharCoroutine != null)
+                    {
+                        initCharCoroutine = null;
+                    }
+                    initCharCoroutine = StartCoroutine(initCharacter());
+                }
+                else
+                {
+                    Debug.LogError("NO RESPONSE FROM SERVER...");
+                }
             }
-            initCharCoroutine = StartCoroutine(initCharacter());
         }
         else
         {
-            Debug.LogError("NO RESPONSE FROM SERVER...");
+            Debug.LogError("Server connection is inactive.");
         }
     }
 
@@ -355,10 +407,8 @@ public class characterScript : MonoBehaviour
     // Function that determines a hit on the collider, and records the timestamp
     private void OnTriggerEnter2D(Collider2D other)
     {
-        Debug.Log("instance is hit");
         if (other.tag == "item" && isDeciding == false)
         {
-
             if (isHit == false)
             {
                 if (!simStart && isItem)
@@ -441,35 +491,10 @@ public class characterScript : MonoBehaviour
 
                     setX = item;
                     //-------------------------------------------------------------------------------SORTING COULD BE ADDED IN HERE
-                    if (!isStart)
-                    {
-                        if (isSorting)
-                        {
-                            str_shoppingList = string.Join(",", cpy_shoppingList);
-                            if (cpy_shoppingList.Count > 1)
-                                str_shoppingList = pythonConnect.SortConnection("mid^" + setX + "/" + str_shoppingList, true);
-                            else if ((cpy_shoppingList.Count == 1))
-                            {
-                                str_shoppingList = pythonConnect.SortConnection("end^" + str_shoppingList, true);
-                                Debug.Log("end of the list");
-                            }
-                        }
+                   
+                    ToSort(false, setX);
+                    i = 0;
 
-                        else if (!isSorting)
-                        {
-                            str_shoppingList = string.Join(",", cpy_shoppingList);
-                            if (cpy_shoppingList.Count > 1)
-                                str_shoppingList = pythonConnect.SortConnection("mid^" + setX + "/" + str_shoppingList, false);
-                            else if ((cpy_shoppingList.Count == 1))
-                            {
-                                str_shoppingList = pythonConnect.SortConnection("end^" + str_shoppingList, false);
-                                Debug.Log("end of the list");
-                            }
-                        }
-                        cpy_shoppingList.Clear();
-                        cpy_shoppingList = str_shoppingList.Split(", ").ToList();
-                        i = 0;
-                    }
                     ss.DestroySpawnedObjects();
                     itemPrefab.SetActive(false);
                     yield return new WaitForSeconds(1f);

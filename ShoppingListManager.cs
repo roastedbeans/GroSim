@@ -1,18 +1,16 @@
 using UnityEngine;
+using UnityEngine.UI;
 using System.Collections.Generic;
 using System.IO;
 
 public class ShoppingListManager : MonoBehaviour
 {
     public List<List<string>> shoppingLists = new List<List<string>>();
+    public InputField fileNameInput;
 
-    void Start()
+    public bool LoadShoppingListsFromCSV()
     {
-        LoadShoppingListsFromCSV("ShoppingListData");
-    }
-
-    void LoadShoppingListsFromCSV(string csvFileName)
-    {
+        string csvFileName = fileNameInput.text;
         TextAsset csvFile = Resources.Load<TextAsset>(csvFileName);
 
         if (csvFile != null)
@@ -24,10 +22,13 @@ public class ShoppingListManager : MonoBehaviour
                 List<string> itemList = new List<string>(items);
                 shoppingLists.Add(itemList);
             }
+
+            return true;
         }
         else
         {
             Debug.LogError("CSV file not found: " + csvFileName);
+            return false;
         }
     }
 }

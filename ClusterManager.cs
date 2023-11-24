@@ -21,10 +21,12 @@ public class ClusterManager : MonoBehaviour
     public Button PrevButton;
     public Button NextButton;
     public Button HideButton;
+    SimulationController simulationController;
+    public GameObject gameControl;
     int maxCluster = 0;
     int cluster = 0;
 
-    public pythonConnection pythonConnect;
+    pythonConnection pythonConnect;
 
     public string filePath;  // The path to file
     public string folderPath;  // The path to fodler
@@ -92,15 +94,7 @@ public class ClusterManager : MonoBehaviour
         Directory.CreateDirectory(folderPath); // Create the folder if it doesn't exist
 
         pythonConnect = GetComponent<pythonConnection>();
-
-        Clusterbutton = Clusterbutton.GetComponent<Button>();
-        Clusterbutton.onClick.AddListener(ClusterConnect);
-        PrevButton = PrevButton.GetComponent<Button>();
-        PrevButton.onClick.AddListener(PrevCluster);
-        NextButton = NextButton.GetComponent<Button>();
-        NextButton.onClick.AddListener(NextCluster);
-        HideButton = HideButton.GetComponent<Button>();
-        HideButton.onClick.AddListener(HideCluster);
+        simulationController = gameControl.GetComponent<SimulationController>();
 
     }
 
@@ -112,9 +106,16 @@ public class ClusterManager : MonoBehaviour
 
     public void ClusterConnect()
     {
-
-        pythonConnect.ClusterConnection();
-        ClusterDone();
+        if (pythonConnect.IsConnected())
+        {
+            simulationController.DisplayButtonsCluster();
+            pythonConnect.ClusterConnection();
+            ClusterDone();
+        }
+        else
+        {
+            Debug.LogError("Server connection is inactive.");
+        }
 
     }
 

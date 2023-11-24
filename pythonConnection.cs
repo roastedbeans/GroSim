@@ -17,8 +17,21 @@ public class pythonConnection : MonoBehaviour
     private TcpClient client;
     private NetworkStream stream;
 
-
-
+    public bool IsConnected()
+    {
+        try
+        {
+            client = new TcpClient(serverAddress, serverPort);
+            // Try to send a small piece of data to check the connection
+            // You can replace this with any operation that involves communication
+            client.GetStream().Write(new byte[] { 0 }, 0, 1);
+            return true;
+        }
+        catch (System.Exception e)
+        {
+            return false;
+        }
+    }
 
     public void ConnectToServer()
     {
