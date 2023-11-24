@@ -1,3 +1,32 @@
 {
+<<<<<<< HEAD
     "nuxt.isNuxtApp": false
 }
+=======
+	"cSpell.words": [
+		"Bagoong",
+		"Bangus",
+		"Camote",
+		"Icecream",
+		"longganisa",
+		"lumpia",
+		"Otap",
+		"Piaya",
+		"Polvoron",
+		"Ponkan",
+		"Quekiam",
+		"ribeye",
+		"Rosquillos",
+		"siomai",
+		"tacchino",
+		"tapa",
+		"Tocino",
+		"Umami"
+	],
+	"C_Cpp.default.compilerPath": "C:\\msys64\\mingw64\\bin\\cpp.exe",
+	"editor.formatOnSave": true,
+	"files.autoSave": "afterDelay",
+	"files.trimTrailingWhitespace": true,
+	"csharp.format.enable": true
+}
+>>>>>>> 858c32363be29d70529905f8773cca7236f19d3d
